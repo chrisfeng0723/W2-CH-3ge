@@ -6,22 +6,22 @@
  */
 
 package main
+
 import (
 	"W2-CH-3ge/internal"
-	"W2-CH-3ge/internal/schema"
 	"fmt"
-	termbox "github.com/nsf/termbox-go"
+	"github.com/nsf/termbox-go"
 )
 
 
 
 func main()  {
-	resultMap := make(chan schema.Result)
-	hfResultMap :=make(chan schema.HFResult)
-	internal.Worker("W-2_1.gjf.gjf.gjf.log",resultMap,hfResultMap)
 
 
-	//pause()
+internal.Worker()
+
+
+	pause()
 }
 
 func init() {
@@ -41,3 +41,5 @@ Loop:
 		}
 	}
 }
+
+
