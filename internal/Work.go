@@ -12,8 +12,10 @@ import (
 	"W2-CH-3ge/utils"
 	"fmt"
 	"github.com/360EntSecGroup-Skylar/excelize/v2"
+	_ "github.com/shopspring/decimal"
 	"github.com/spf13/cast"
 	"io/ioutil"
+	"sort"
 	"strings"
 	"time"
 )
@@ -22,35 +24,47 @@ const PATH = "./data/"
 
 func Worker() {
 	//resultSlice := make([]schema.Result,0)
+	//hf的map值，key为所在的文件，value为hf值
 	hfValueMap := make(map[string]string, 0)
+	//文件编号的slice
 	locationSlice := make([]int, 0)
+	//所有CH的值
 	allResultSlice := make([]schema.Result, 0)
+	//C的数值slice
+	cResultSlice :=make([]int,0)
+	//H的数值slice
+	hResultSlice :=make([]int,0)
+
 	files, _ := ioutil.ReadDir(PATH)
 	for _, f := range files {
 		fmt.Println("正在处理" + f.Name())
-		hfValue, location, resultSlice := GetValueByFileName(f.Name())
+		hfValue, location, resultSlice,cSlice,hSlice := GetValueByFileName(f.Name())
 		locationSlice = append(locationSlice, cast.ToInt(location))
 		hfValueMap[location] = hfValue
 		allResultSlice = append(allResultSlice, resultSlice...)
+		cResultSlice = append(cResultSlice,cSlice...)
+		hResultSlice = append(hResultSlice,hSlice...)
 	}
 
-	fmt.Println(locationSlice, hfValueMap)
-	WriteExcel(locationSlice,hfValueMap)
+	//排序文件编号，写入hf值
+	sort.Ints(locationSlice)
+	//排序CH顺序
+	uniqueCSlice :=utils.RemoveDuplicate(cResultSlice)
+	uniqueHSlice :=utils.RemoveDuplicate(hResultSlice)
+	sort.Ints(uniqueHSlice)
+	sort.Ints(uniqueCSlice)
 
-	/**
-	locationSlice := make([]int, 0)
+	fmt.Println(uniqueCSlice,uniqueHSlice)
 
-	//处理hf的值
-	locationSlice = append(locationSlice, cast.ToInt(location))
-	hfValueMap[location] = hfValue
-	fmt.Println("111")
-	fmt.Println(locationSlice, hfValueMap)
-	fmt.Println("222")
-	*/
+
+	WriteExcel(locationSlice, hfValueMap,uniqueCSlice,uniqueHSlice,allResultSlice)
+
+
 
 }
 
-func GetValueByFileName(fileName string) (hfValue, location string, resultContentSlice []schema.Result) {
+
+func GetValueByFileName(fileName string) (hfValue, location string, resultContentSlice []schema.Result,cResultSlice,hResultSlice []int) {
 	fileName = PATH + fileName
 	file, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -72,6 +86,13 @@ func GetValueByFileName(fileName string) (hfValue, location string, resultConten
 					Element:  resultSlice[1],
 					Value:    resultSlice[4],
 				}
+				if resultSlice[1] == "H"{
+					hResultSlice = append(hResultSlice,cast.ToInt(resultSlice[0]))
+				}
+
+				if resultSlice[1] == "C"{
+					cResultSlice = append(cResultSlice,cast.ToInt(resultSlice[0]))
+				}
 				resultContentSlice = append(resultContentSlice, result)
 			}
 
@@ -83,34 +104,48 @@ func GetValueByFileName(fileName string) (hfValue, location string, resultConten
 
 }
 
-func WriteExcel(locationSlice []int, hfValueMap map[string]string) {
+func WriteExcel(locationSlice []int, hfValueMap map[string]string,uniqueCSlice,uniqueHSlice []int,allResultSlice []schema.Result) {
 
 	fileName := time.Now().Format("20060102150405") + ".xlsx"
 	f := excelize.NewFile()
 	Sheet2 := "Sheet2"
-	index := f.NewSheet(Sheet2)
-	f.SetCellValue(Sheet2,"C1","HF")
-	countHF :=len(locationSlice)
-	f.SetCellFormula(Sheet2,"G"+cast.ToString(countHF+2),"")
-	sumFormula := fmt.Sprintf("SUM(G2:%s)","G"+cast.ToString(countHF+1))
-	f.SetCellFormula(Sheet2,"G"+cast.ToString(countHF+2),sumFormula)
+	Sheet1 := "Sheet1"
+	index := f.NewSheet(Sheet1)
+	f.SetCellValue(Sheet2, "C1", "HF")
+	countHF := len(locationSlice)
+	f.SetCellFormula(Sheet2, "G"+cast.ToString(countHF+2), "")
+	sumFormula := fmt.Sprintf("SUM(G2:%s)", "G"+cast.ToString(countHF+1))
+	f.SetCellFormula(Sheet2, "G"+cast.ToString(countHF+2), sumFormula)
 	for key, val := range locationSlice {
-		yAxis := cast.ToString(key+2)
-		f.SetCellValue(Sheet2,"B"+yAxis,val)
-		f.SetCellValue(Sheet2,"C"+yAxis,hfValueMap[cast.ToString(val)])
-		formulaD :=     "C"+yAxis+"-C2"
-		f.SetCellFormula(Sheet2,"D"+yAxis,formulaD)
-		formulaE := "D"+yAxis+"*627.5"
-		f.SetCellFormula(Sheet2,"E"+yAxis,formulaE)
-		formulaF :="-E"+yAxis+"/(0.0019858955*298.15)"
-		f.SetCellFormula(Sheet2,"F"+yAxis,formulaF)
-		formulaG :="EXP(F"+yAxis+")"
-		f.SetCellFormula(Sheet2,"G"+yAxis,formulaG)
-		formulaH :="G"+yAxis+"/G"+cast.ToString(countHF+2)
-		f.SetCellFormula(Sheet2,"H"+yAxis,formulaH)
+		yAxis := cast.ToString(key + 2)
+		f.SetCellValue(Sheet2, "B"+yAxis, val)
+		f.SetCellValue(Sheet2, "C"+yAxis, hfValueMap[cast.ToString(val)])
+		formulaD := "C" + yAxis + "-C2"
+		f.SetCellFormula(Sheet2, "D"+yAxis, formulaD)
+		formulaE := "D" + yAxis + "*627.5"
+		f.SetCellFormula(Sheet2, "E"+yAxis, formulaE)
+		formulaF := "-E" + yAxis + "/(0.0019858955*298.15)"
+		f.SetCellFormula(Sheet2, "F"+yAxis, formulaF)
+		formulaG := "EXP(F" + yAxis + ")"
+		f.SetCellFormula(Sheet2, "G"+yAxis, formulaG)
+		formulaH := "G" + yAxis + "/G" + cast.ToString(countHF+2)
+		f.SetCellFormula(Sheet2, "H"+yAxis, formulaH)
 
 	}
 	f.SetActiveSheet(index)
+
+
+
+
+	for key,val := range locationSlice{
+		coordinate,_ :=excelize.CoordinatesToCellName(key+2,1)
+
+		f.SetCellValue(Sheet1,coordinate,val)
+	}
+	//第一行最后一列
+	lastCoordinate,_ :=excelize.CoordinatesToCellName(len(locationSlice)+2,1)
+	f.SetCellValue(Sheet1,lastCoordinate,"加权")
+
 	if err := f.SaveAs(fileName); err != nil {
 		fmt.Println(err)
 	}
@@ -118,46 +153,6 @@ func WriteExcel(locationSlice []int, hfValueMap map[string]string) {
 
 }
 
-/**
-func WriteExcel(resultMap chan schema.Result,hfResultMap chan schema.HFResult){
-
-	fileName := "test.xlsx"
-	f, err := excelize.OpenFile(fileName)
-	defer f.Save()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	index := f.NewSheet("Sheet2")
-
-	for {
-		hf := <- hfResultMap
-		f.SetCellValue("Sheet2", "A"+CurrentLine,Content[val])
-		Column2 :="B"+CurrentLine
-		f.SetCellValue("Sheet2",Column2,val)
-		formula3 :=	Column2+"-B1"
-		f.SetCellFormula("Sheet2","C"+CurrentLine,formula3)
-		formula4 :=	"C"+CurrentLine+"*627.5"
-		f.SetCellFormula("Sheet2","D"+CurrentLine,formula4)
-		formula5 :=	"-D"+CurrentLine+"/(0.0019858955*298.15)"
-		f.SetCellFormula("Sheet2","E"+CurrentLine,formula5)
-		formula6 :=	"EXP(E"+CurrentLine+")"
-		f.SetCellFormula("Sheet2","F"+CurrentLine,formula6)
-		formula7 :=	"F"+CurrentLine+"/"+"F"+sumLine
-		f.SetCellFormula("Sheet2","G"+CurrentLine,formula7)
-
-		numberLocation[Content[val]] = "G"+CurrentLine
-		start++
-
-	}
-
-	sumFormula := fmt.Sprintf("SUM(F1:%s)","F"+cast.ToString(totalLine))
-	f.SetCellFormula("Sheet2","F"+sumLine,sumFormula)
-	f.SetActiveSheet(index)
-	if err := f.Save(); err != nil {
-		fmt.Println(err)
-	}
-	return
+func GetCoorddinate(){
 
 }
-*/

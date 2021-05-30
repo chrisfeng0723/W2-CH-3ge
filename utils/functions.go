@@ -44,4 +44,18 @@ func GetFileHF(fileContent string) string {
 	return ""
 }
 
+//删除slice中的重复值
+func RemoveDuplicate(slc []int) []int {
+	result := make([]int,0)         //存放返回的不重复切片
+	tempMap := make(map[int]bool,0) // 存放不重复主键
+	for _, val := range slc {
+		if _,ok :=tempMap[val];!ok{
+			tempMap[val] = true
+			result = append(result,val)
+		}
+
+	}
+	return result
+}
+
 
