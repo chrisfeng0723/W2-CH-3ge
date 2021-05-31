@@ -23,7 +23,6 @@ func GetFileNumber(fileName string) string {
 	return params[1]
 }
 
-
 //获取文件的HF值
 func GetFileHF(fileContent string) string {
 
@@ -46,16 +45,24 @@ func GetFileHF(fileContent string) string {
 
 //删除slice中的重复值
 func RemoveDuplicate(slc []int) []int {
-	result := make([]int,0)         //存放返回的不重复切片
-	tempMap := make(map[int]bool,0) // 存放不重复主键
+	result := make([]int, 0)         //存放返回的不重复切片
+	tempMap := make(map[int]bool, 0) // 存放不重复主键
 	for _, val := range slc {
-		if _,ok :=tempMap[val];!ok{
+		if _, ok := tempMap[val]; !ok {
 			tempMap[val] = true
-			result = append(result,val)
+			result = append(result, val)
 		}
 
 	}
 	return result
 }
 
+//将一个slice转换成一个map,value作为key，key作为value，仅适用于值不重复的slice
 
+func TransferSliceToMap(slice []int) map[int]int {
+	result := make(map[int]int, len(slice))
+	for key, value := range slice {
+		result[value] = key
+	}
+	return result
+}

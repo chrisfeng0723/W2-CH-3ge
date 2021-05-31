@@ -12,7 +12,7 @@ import (
 	"W2-CH-3ge/utils"
 	"fmt"
 	"github.com/360EntSecGroup-Skylar/excelize/v2"
-	_ "github.com/shopspring/decimal"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/cast"
 	"io/ioutil"
 	"sort"
@@ -25,46 +25,54 @@ const PATH = "./data/"
 func Worker() {
 	//resultSlice := make([]schema.Result,0)
 	//hf的map值，key为所在的文件，value为hf值
-	hfValueMap := make(map[string]string, 0)
+	hfValueMap := make(map[float64]string, 0)
+	hfValueSlice := make([]float64, 0)
 	//文件编号的slice
 	locationSlice := make([]int, 0)
 	//所有CH的值
 	allResultSlice := make([]schema.Result, 0)
 	//C的数值slice
-	cResultSlice :=make([]int,0)
+	cResultSlice := make([]int, 0)
 	//H的数值slice
-	hResultSlice :=make([]int,0)
+	hResultSlice := make([]int, 0)
 
 	files, _ := ioutil.ReadDir(PATH)
 	for _, f := range files {
 		fmt.Println("正在处理" + f.Name())
-		hfValue, location, resultSlice,cSlice,hSlice := GetValueByFileName(f.Name())
+		hfValue, location, resultSlice, cSlice, hSlice := GetValueByFileName(f.Name())
 		locationSlice = append(locationSlice, cast.ToInt(location))
-		hfValueMap[location] = hfValue
-		allResultSlice = append(allResultSlice, resultSlice...)
-		cResultSlice = append(cResultSlice,cSlice...)
-		hResultSlice = append(hResultSlice,hSlice...)
+
+		//处理hf值
+		r, _ := decimal.NewFromString(hfValue)
+		hfFloat, _ := r.Round(6).Float64()
+		//有重复的则直接舍弃
+		if _, ok := hfValueMap[hfFloat]; !ok {
+			hfValueMap[hfFloat] = location
+			hfValueSlice = append(hfValueSlice, hfFloat)
+			//所有结果
+			allResultSlice = append(allResultSlice, resultSlice...)
+			cResultSlice = append(cResultSlice, cSlice...)
+			hResultSlice = append(hResultSlice, hSlice...)
+		}
+
 	}
 
 	//排序文件编号，写入hf值
 	sort.Ints(locationSlice)
+	sort.Float64s(hfValueSlice)
 	//排序CH顺序
-	uniqueCSlice :=utils.RemoveDuplicate(cResultSlice)
-	uniqueHSlice :=utils.RemoveDuplicate(hResultSlice)
+	uniqueCSlice := utils.RemoveDuplicate(cResultSlice)
+	uniqueHSlice := utils.RemoveDuplicate(hResultSlice)
 	sort.Ints(uniqueHSlice)
 	sort.Ints(uniqueCSlice)
 
-	fmt.Println(uniqueCSlice,uniqueHSlice)
+	//fmt.Println(hfValueSlice,hfValueMap)
 
-
-	WriteExcel(locationSlice, hfValueMap,uniqueCSlice,uniqueHSlice,allResultSlice)
-
-
+	WriteExcel(locationSlice, hfValueSlice, hfValueMap, uniqueCSlice, uniqueHSlice, allResultSlice)
 
 }
 
-
-func GetValueByFileName(fileName string) (hfValue, location string, resultContentSlice []schema.Result,cResultSlice,hResultSlice []int) {
+func GetValueByFileName(fileName string) (hfValue, location string, resultContentSlice []schema.Result, cResultSlice, hResultSlice []int) {
 	fileName = PATH + fileName
 	file, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -86,12 +94,12 @@ func GetValueByFileName(fileName string) (hfValue, location string, resultConten
 					Element:  resultSlice[1],
 					Value:    resultSlice[4],
 				}
-				if resultSlice[1] == "H"{
-					hResultSlice = append(hResultSlice,cast.ToInt(resultSlice[0]))
+				if resultSlice[1] == "H" {
+					hResultSlice = append(hResultSlice, cast.ToInt(resultSlice[0]))
 				}
 
-				if resultSlice[1] == "C"{
-					cResultSlice = append(cResultSlice,cast.ToInt(resultSlice[0]))
+				if resultSlice[1] == "C" {
+					cResultSlice = append(cResultSlice, cast.ToInt(resultSlice[0]))
 				}
 				resultContentSlice = append(resultContentSlice, result)
 			}
@@ -104,22 +112,24 @@ func GetValueByFileName(fileName string) (hfValue, location string, resultConten
 
 }
 
-func WriteExcel(locationSlice []int, hfValueMap map[string]string,uniqueCSlice,uniqueHSlice []int,allResultSlice []schema.Result) {
+func WriteExcel(locationSlice []int, hfSlice []float64, hfValueMap map[float64]string, uniqueCSlice, uniqueHSlice []int, allResultSlice []schema.Result) {
 
 	fileName := time.Now().Format("20060102150405") + ".xlsx"
 	f := excelize.NewFile()
 	Sheet2 := "Sheet2"
 	Sheet1 := "Sheet1"
 	index := f.NewSheet(Sheet1)
+	f.NewSheet(Sheet2)
 	f.SetCellValue(Sheet2, "C1", "HF")
 	countHF := len(locationSlice)
 	f.SetCellFormula(Sheet2, "G"+cast.ToString(countHF+2), "")
 	sumFormula := fmt.Sprintf("SUM(G2:%s)", "G"+cast.ToString(countHF+1))
 	f.SetCellFormula(Sheet2, "G"+cast.ToString(countHF+2), sumFormula)
-	for key, val := range locationSlice {
+	fmt.Println(hfValueMap, hfSlice)
+	for key, val := range hfSlice {
 		yAxis := cast.ToString(key + 2)
-		f.SetCellValue(Sheet2, "B"+yAxis, val)
-		f.SetCellValue(Sheet2, "C"+yAxis, hfValueMap[cast.ToString(val)])
+		f.SetCellValue(Sheet2, "B"+yAxis, hfValueMap[val])
+		f.SetCellValue(Sheet2, "C"+yAxis, val)
 		formulaD := "C" + yAxis + "-C2"
 		f.SetCellFormula(Sheet2, "D"+yAxis, formulaD)
 		formulaE := "D" + yAxis + "*627.5"
@@ -135,24 +145,47 @@ func WriteExcel(locationSlice []int, hfValueMap map[string]string,uniqueCSlice,u
 	f.SetActiveSheet(index)
 
 
-
-
-	for key,val := range locationSlice{
-		coordinate,_ :=excelize.CoordinatesToCellName(key+2,1)
-
-		f.SetCellValue(Sheet1,coordinate,val)
+	//处理sheet1的值
+	for key, val := range locationSlice {
+		coordinate, _ := excelize.CoordinatesToCellName(key+2, 1)
+		f.SetCellValue(Sheet1, coordinate, val)
 	}
 	//第一行最后一列
-	lastCoordinate,_ :=excelize.CoordinatesToCellName(len(locationSlice)+2,1)
-	f.SetCellValue(Sheet1,lastCoordinate,"加权")
+	lastCoordinate, _ := excelize.CoordinatesToCellName(len(locationSlice)+2, 1)
+	f.SetCellValue(Sheet1, lastCoordinate, "加权")
+
+	locationMap := utils.TransferSliceToMap(locationSlice)
+	cMap := utils.TransferSliceToMap(uniqueCSlice)
+	hMap := utils.TransferSliceToMap(uniqueHSlice)
+	cCount := len(uniqueCSlice)
+	//hCount := len(uniqueHSlice)
+	var x, y int
+	for _, value := range allResultSlice {
+		y = locationMap[cast.ToInt(value.Location)] + 2
+		if value.Element == "C" {
+			x = cMap[cast.ToInt(value.Sequence)] + 2
+		} else {
+			x = hMap[cast.ToInt(value.Sequence)] + cCount + 3
+		}
+		f.SetCellValue(Sheet1, "A"+cast.ToString(x), value.Element+value.Sequence)
+		coordinate, _ := excelize.CoordinatesToCellName(y, x)
+		f.SetCellValue(Sheet1, coordinate, value.Value)
+	}
+
+
+	//计算最后的加权值，分别通过C,H
+	for key,_:= range uniqueCSlice{
+		for lkey,_ := range locationSlice{
+			location,_ := excelize.CoordinatesToCellName(lkey+2,key+2)
+			//temp :=fmt.Sprintf("%s*Sheet2!H%s",location,)
+		}
+	}
+
+
 
 	if err := f.SaveAs(fileName); err != nil {
 		fmt.Println(err)
 	}
 	return
-
-}
-
-func GetCoorddinate(){
 
 }

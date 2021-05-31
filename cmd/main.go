@@ -21,7 +21,7 @@ func main()  {
 internal.Worker()
 
 
-	pause()
+	//pause()
 }
 
 func init() {
