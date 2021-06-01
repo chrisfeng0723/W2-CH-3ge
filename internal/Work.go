@@ -175,42 +175,40 @@ func WriteExcel(locationSlice []int, hfSlice []float64, hfValueMap map[float64]s
 
 	fmt.Println("CH数据数据处理完毕...")
 	//通过按照float排序后hfslice去找出每个location所在位置
-	hfCalcMap := make(map[string]string,len(hfSlice))
-	for fkey,fval := range hfSlice{
-		hfCalcMap[hfValueMap[fval]] = cast.ToString(fkey+2)
+	hfCalcMap := make(map[string]string, len(hfSlice))
+	for fkey, fval := range hfSlice {
+		hfCalcMap[hfValueMap[fval]] = cast.ToString(fkey + 2)
 	}
 	//计算最后的加权值，分别通过C,H
 
-	for key,_:= range uniqueCSlice{
-		sumFormulaSlice := make([]string,0)
-		for lkey,lval := range locationSlice{
-			location,_ := excelize.CoordinatesToCellName(lkey+2,key+2)
+	for key, _ := range uniqueCSlice {
+		sumFormulaSlice := make([]string, 0)
+		for lkey, lval := range locationSlice {
+			location, _ := excelize.CoordinatesToCellName(lkey+2, key+2)
 			lvalStr := cast.ToString(lval)
-			temp :=fmt.Sprintf("%s*Sheet2!H%s",location,hfCalcMap[lvalStr])
-			sumFormulaSlice = append(sumFormulaSlice,temp)
+			temp := fmt.Sprintf("%s*Sheet2!H%s", location, hfCalcMap[lvalStr])
+			sumFormulaSlice = append(sumFormulaSlice, temp)
 		}
-		resultFormula :=fmt.Sprintf("SUM(%s)",strings.Join(sumFormulaSlice,","))
-		resultLocation,_ :=excelize.CoordinatesToCellName(len(locationSlice)+2,key+2)
-		f.SetCellFormula("Sheet1",resultLocation,resultFormula)
+		resultFormula := fmt.Sprintf("SUM(%s)", strings.Join(sumFormulaSlice, ","))
+		resultLocation, _ := excelize.CoordinatesToCellName(len(locationSlice)+2, key+2)
+		f.SetCellFormula("Sheet1", resultLocation, resultFormula)
 	}
 
 	//H的行值要加上C所有行值
-	for key,_:= range uniqueHSlice{
-		sumFormulaSlice := make([]string,0)
-		for lkey,lval := range locationSlice{
-			location,_ := excelize.CoordinatesToCellName(lkey+2,key+2+cCount+1)
+	for key, _ := range uniqueHSlice {
+		sumFormulaSlice := make([]string, 0)
+		for lkey, lval := range locationSlice {
+			location, _ := excelize.CoordinatesToCellName(lkey+2, key+2+cCount+1)
 			lvalStr := cast.ToString(lval)
-			temp :=fmt.Sprintf("%s*Sheet2!H%s",location,hfCalcMap[lvalStr])
-			sumFormulaSlice = append(sumFormulaSlice,temp)
+			temp := fmt.Sprintf("%s*Sheet2!H%s", location, hfCalcMap[lvalStr])
+			sumFormulaSlice = append(sumFormulaSlice, temp)
 		}
-		resultFormula :=fmt.Sprintf("SUM(%s)",strings.Join(sumFormulaSlice,","))
-		resultLocation,_ :=excelize.CoordinatesToCellName(len(locationSlice)+2,key+2+cCount+1)
-		f.SetCellFormula("Sheet1",resultLocation,resultFormula)
+		resultFormula := fmt.Sprintf("SUM(%s)", strings.Join(sumFormulaSlice, ","))
+		resultLocation, _ := excelize.CoordinatesToCellName(len(locationSlice)+2, key+2+cCount+1)
+		f.SetCellFormula("Sheet1", resultLocation, resultFormula)
 	}
 
 	fmt.Println("CH加权数据处理完毕...")
-
-
 
 	if err := f.SaveAs(fileName); err != nil {
 		fmt.Println(err)

@@ -13,15 +13,11 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+func main() {
 
-
-func main()  {
-
-
-internal.Worker()
+	internal.Worker()
 	pause()
 }
-
 
 func init() {
 	if err := termbox.Init(); err != nil {
@@ -40,7 +36,3 @@ Loop:
 		}
 	}
 }
-
-
-
-
