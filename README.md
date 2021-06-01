@@ -11,3 +11,5 @@
 每一个个文件里面获取HF=-1387.7316846\  中获取-1387.7316846的数字，放入data.xlsx的sheet2中。
 
 3.其中的计算公式详见data.xlsx
+
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o W2-CH-3ge.exe cmd/main.go
