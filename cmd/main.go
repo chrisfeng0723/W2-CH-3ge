@@ -19,10 +19,9 @@ func main()  {
 
 
 internal.Worker()
-
-
-	//pause()
+	pause()
 }
+
 
 func init() {
 	if err := termbox.Init(); err != nil {
@@ -41,5 +40,7 @@ Loop:
 		}
 	}
 }
+
+
 
 
