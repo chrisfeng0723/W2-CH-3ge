@@ -40,13 +40,13 @@ func Worker() {
 	for _, f := range files {
 		fmt.Println("正在处理" + f.Name())
 		hfValue, location, resultSlice, cSlice, hSlice := GetValueByFileName(f.Name())
-		locationSlice = append(locationSlice, cast.ToInt(location))
 
 		//处理hf值
 		r, _ := decimal.NewFromString(hfValue)
 		hfFloat, _ := r.Round(6).Float64()
 		//有重复的则直接舍弃
 		if _, ok := hfValueMap[hfFloat]; !ok {
+			locationSlice = append(locationSlice, cast.ToInt(location))
 			hfValueMap[hfFloat] = location
 			hfValueSlice = append(hfValueSlice, hfFloat)
 			//所有结果
