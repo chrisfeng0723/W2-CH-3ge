@@ -43,7 +43,7 @@ func Worker() {
 
 		//处理hf值
 		r, _ := decimal.NewFromString(hfValue)
-		hfFloat, _ := r.Round(6).Float64()
+		hfFloat, _ := r.Round(5).Float64()
 		//有重复的则直接舍弃
 		if _, ok := hfValueMap[hfFloat]; !ok {
 			locationSlice = append(locationSlice, cast.ToInt(location))
